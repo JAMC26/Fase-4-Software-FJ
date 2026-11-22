@@ -1,6 +1,7 @@
 """Entidades iniciales para el sistema de reservas de Software FJ."""
 
 from abc import ABC, abstractmethod
+import logging
 import math
 
 
@@ -219,3 +220,33 @@ class Sistema:
         reserva = Reserva(cliente, servicio, duracion)
         self.reservas.append(reserva)
         return reserva
+
+
+def configurar_registro():
+    """Configura el registro de eventos en el directorio de ejecución."""
+    try:
+        logging.basicConfig(filename="eventos.log", level=logging.INFO,
+                            format="%(asctime)s | %(levelname)s | %(message)s",
+                            encoding="utf-8")
+    except OSError as error:
+        print(f"No se pudo abrir eventos.log: {error}. Se utilizará la consola.")
+        logging.basicConfig(level=logging.INFO)
+
+
+def ejecutar_operacion(indice, descripcion, accion):
+    """Registra el resultado de cada operación y continúa con la siguiente."""
+    print(f"\n{indice}. {descripcion}")
+    try:
+        resultado = accion()
+    except (ErrorValidacion, ErrorReserva, TypeError) as error:
+        logging.exception("Operación %s fallida: %s", indice, descripcion)
+        print(f"Error controlado: {error}")
+    except Exception as error:
+        logging.exception("Error inesperado en operación %s: %s", indice, descripcion)
+        print(f"Error inesperado: {error}")
+    else:
+        logging.info("Operación %s completada: %s", indice, descripcion)
+        if resultado is not None:
+            print(resultado)
+    finally:
+        print("Operación finalizada; la simulación continúa.")
