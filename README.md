@@ -12,4 +12,4 @@ En una terminal abierta en esta carpeta, ejecute `python main.py` o `py main.py`
 
 Las tarifas y los porcentajes son valores de ejemplo. El descuento se aplica antes del impuesto. La disponibilidad es un dato del servicio; el programa no gestiona fechas ni conflictos de horario. Una reserva pendiente puede confirmarse o cancelarse; una confirmada puede procesarse o cancelarse. Una operación inválida no cambia su estado.
 
-Consulte `PRUEBAS.md` para ver los casos comprobados y una ejecución de la simulación.
+Consulte `PRUEBAS.md` para ver la ejecución de la simulación y `PRUEBAS_ESCRITORIO.md` para comparar los resultados esperados y observados de cada caso.
