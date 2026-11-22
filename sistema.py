@@ -1,11 +1,16 @@
 """Entidades iniciales para el sistema de reservas de Software FJ."""
 
 from abc import ABC, abstractmethod
+import logging
 import math
 
 
 class ErrorValidacion(Exception):
     """Indica que un dato obligatorio no es válido."""
+
+
+class ErrorReserva(Exception):
+    """Indica que una operación de reserva no está permitida."""
 
 
 def validar_texto(valor, nombre):
@@ -141,3 +146,107 @@ class Asesoria(Servicio):
 
     def describir(self):
         return f"Asesoría {self._nombre}: {self._especialidad}; tarifa ${self._tarifa:,.2f}/hora"
+
+
+class Reserva(Entidad):
+    """Relaciona cliente y servicio y controla el estado de una reserva."""
+
+    def __init__(self, cliente, servicio, duracion):
+        if not isinstance(cliente, Cliente) or not isinstance(servicio, Servicio):
+            raise ErrorValidacion("La reserva requiere un cliente y un servicio válidos")
+        self._cliente = cliente
+        self._servicio = servicio
+        self._duracion = servicio.validar_parametros(duracion)
+        self._estado = "pendiente"
+
+    @property
+    def estado(self):
+        return self._estado
+
+    def confirmar(self):
+        """Confirma una reserva pendiente si el servicio está disponible."""
+        if self._estado != "pendiente":
+            raise ErrorReserva("Solo se puede confirmar una reserva pendiente")
+        if not self._servicio.disponible:
+            raise ErrorReserva("El servicio no está disponible")
+        self._estado = "confirmada"
+        return self.describir()
+
+    def cancelar(self):
+        """Cancela una reserva pendiente o confirmada."""
+        if self._estado not in ("pendiente", "confirmada"):
+            raise ErrorReserva("Solo se puede cancelar una reserva pendiente o confirmada")
+        self._estado = "cancelada"
+        return self.describir()
+
+    def procesar(self, impuesto=0, descuento=0):
+        """Calcula el costo de una reserva confirmada y la marca procesada."""
+        if self._estado != "confirmada":
+            raise ErrorReserva("Solo se puede procesar una reserva confirmada")
+        costo = self._servicio.calcular_costo(self._duracion, impuesto, descuento)
+        self._estado = "procesada"
+        return f"{self.describir()} | Total: ${costo:,.2f}"
+
+    def describir(self):
+        return (f"{self._cliente.nombre} | {self._servicio.describir()} | "
+                f"{self._duracion:g} h | {self._estado}")
+
+
+class Sistema:
+    """Mantiene clientes, servicios y reservas en listas durante la ejecución."""
+
+    def __init__(self):
+        self.clientes = []
+        self.servicios = []
+        self.reservas = []
+
+    def registrar_cliente(self, cliente):
+        if not isinstance(cliente, Cliente):
+            raise ErrorValidacion("Cliente inválido")
+        if any(item.identificacion == cliente.identificacion for item in self.clientes):
+            raise ErrorValidacion("La identificación ya está registrada")
+        self.clientes.append(cliente)
+        return cliente.describir()
+
+    def registrar_servicio(self, servicio):
+        if not isinstance(servicio, Servicio):
+            raise ErrorValidacion("Servicio inválido")
+        self.servicios.append(servicio)
+        return servicio.describir()
+
+    def crear_reserva(self, cliente, servicio, duracion):
+        if cliente not in self.clientes or servicio not in self.servicios:
+            raise ErrorReserva("El cliente y el servicio deben estar registrados")
+        reserva = Reserva(cliente, servicio, duracion)
+        self.reservas.append(reserva)
+        return reserva
+
+
+def configurar_registro():
+    """Configura el registro de eventos en el directorio de ejecución."""
+    try:
+        logging.basicConfig(filename="eventos.log", level=logging.INFO,
+                            format="%(asctime)s | %(levelname)s | %(message)s",
+                            encoding="utf-8")
+    except OSError as error:
+        print(f"No se pudo abrir eventos.log: {error}. Se utilizará la consola.")
+        logging.basicConfig(level=logging.INFO)
+
+
+def ejecutar_operacion(indice, descripcion, accion):
+    """Registra el resultado de cada operación y continúa con la siguiente."""
+    print(f"\n{indice}. {descripcion}")
+    try:
+        resultado = accion()
+    except (ErrorValidacion, ErrorReserva, TypeError) as error:
+        logging.exception("Operación %s fallida: %s", indice, descripcion)
+        print(f"Error controlado: {error}")
+    except Exception as error:
+        logging.exception("Error inesperado en operación %s: %s", indice, descripcion)
+        print(f"Error inesperado: {error}")
+    else:
+        logging.info("Operación %s completada: %s", indice, descripcion)
+        if resultado is not None:
+            print(resultado)
+    finally:
+        print("Operación finalizada; la simulación continúa.")
